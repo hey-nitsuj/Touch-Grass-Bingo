@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f3d2b" />
+    <meta
+      name="description"
+      content="AI-generated bingo cards for your walk. Runs fully offline on an open-weight model in your browser — no servers, no location tracking."
+    />
+    <title>Touch Grass Bingo — AI-generated walk cards, offline</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <script type="module" crossorigin src="/assets/index-6wJdkk7I.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-B35cHFe2.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <header class="site-header">
+      <div class="brand">
+        <img src="/icon.svg" alt="" width="44" height="44" class="brand-mark" />
+        <div class="brand-text">
+          <h1>Touch Grass Bingo</h1>
+          <p class="tagline">A 5&times;5 card of things to spot on your walk — generated on your device.</p>
+        </div>
+      </div>
+      <div class="model-chip" id="model-chip" aria-live="polite">
+        <span class="model-dot" id="model-dot"></span>
+        <span id="model-chip-text">Model: idle</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="setup" id="setup" aria-label="Card setup">
+        <h2 class="section-title">Plan the walk</h2>
+        <div class="setup-grid">
+          <fieldset class="chip-set">
+            <legend>Where</legend>
+            <div class="chips" id="habitat-chips" role="radiogroup" aria-label="Habitat"></div>
+          </fieldset>
+          <fieldset class="chip-set">
+            <legend>When</legend>
+            <div class="chips" id="time-chips" role="radiogroup" aria-label="Time of day"></div>
+          </fieldset>
+          <label class="focus-label">
+            <span>Focus <em>(optional)</em></span>
+            <input
+              type="text"
+              id="focus-input"
+              maxlength="60"
+              placeholder="birds, street art, dogs…"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="generate-btn">✦ Generate with local AI</button>
+          <button class="btn btn-ghost" id="preset-btn">Use a preset deck</button>
+        </div>
+        <p class="hint" id="generate-hint">
+          First generation downloads the model (~570&nbsp;MB) once; after that it works with no internet
+          at all.
+        </p>
+      </section>
+
+      <div class="engine-status" id="engine-status" hidden>
+        <div class="engine-status-row">
+          <span id="engine-status-text">Loading model…</span>
+          <span id="engine-status-pct"></span>
+        </div>
+        <div class="progress"><div class="progress-bar" id="engine-progress-bar"></div></div>
+      </div>
+
+      <section class="card-area" id="card-area" hidden aria-label="Your bingo card">
+        <div class="card-head">
+          <div>
+            <h2 id="card-title">Your card</h2>
+            <p class="card-meta" id="card-meta"></p>
+          </div>
+          <div class="card-tools">
+            <button class="btn btn-ghost btn-small" id="share-btn">Save PNG</button>
+            <button class="btn btn-ghost btn-small" id="new-card-btn">New card</button>
+          </div>
+        </div>
+        <div class="bingo-grid" id="bingo-grid" role="grid" aria-label="Bingo card squares"></div>
+        <p class="bingo-banner" id="bingo-banner" hidden>🎉 BINGO! Now go get some fresh air.</p>
+        <div class="recap-row">
+          <button class="btn btn-secondary" id="recap-btn">✍ Write my field recap</button>
+          <span class="hint" id="recap-hint">The same local model turns your checked squares into a short walk story.</span>
+        </div>
+        <div class="recap-box" id="recap-box" hidden>
+          <h3>Field recap</h3>
+          <p id="recap-text"></p>
+        </div>
+      </section>
+
+      <section class="empty-state" id="empty-state">
+        <div class="empty-art" aria-hidden="true">🌿</div>
+        <p>
+          Pick a habitat and hit <strong>Generate</strong>. The card loads a 1&nbsp;billion parameter
+          open-weight model (Gemma&nbsp;3) straight into your browser with WebLLM — your walk data never
+          leaves the device.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Built for the <a href="https://dev.to/challenges/hf26">Hacktoberfest Open-Source AI Challenge:
+        Week 1 — Touch Grass</a>. Inference by
+        <a href="https://github.com/mlc-ai/web-llm">WebLLM</a> + Gemma&nbsp;3&nbsp;1B (open weights).
+        No accounts, no analytics, works in airplane mode after first load.
+      </p>
+    </footer>
+
+  </body>
+</html>

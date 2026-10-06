@@ -1,0 +1,29 @@
+{
+  "name": "touch-grass-bingo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI-generated touch grass bingo cards, fully offline in your browser.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsx tests/extract.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@mlc-ai/web-llm": "^0.2.85"
+  },
+  "devDependencies": {
+    "@webgpu/types": "^0.1.74",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vite-plugin-pwa": "^2.0.0"
+  }
+}
