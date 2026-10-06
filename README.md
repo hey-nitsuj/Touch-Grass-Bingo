@@ -110,4 +110,4 @@ A 1B model is charming but flaky, so the app defends itself:
 
 ---
 
-Built for the [Hacktoberfest Open-Source AI Challenge: Week 1 — Touch Grass](https://dev.to/challenges/hf26).
+Built for the [Hacktoberfest Open-Source AI Challenge: Week 1 — Touch Grass](https://dev.to/challenges/hf26)!
