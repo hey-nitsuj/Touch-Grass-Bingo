@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // GitHub Pages serves this repo at /Touch-Grass-Bingo/, not the domain root.
+  // Without this, every asset URL points at hey-nitsuj.github.io/assets/… (404).
+  base: "/Touch-Grass-Bingo/",
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
@@ -23,7 +26,7 @@ export default defineConfig({
         theme_color: "#1f3d2b",
         background_color: "#f6f1e3",
         display: "standalone",
-        start_url: "/",
+        start_url: ".",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
