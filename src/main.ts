@@ -140,7 +140,11 @@ async function ensureModel(): Promise<boolean> {
     return true;
   } catch (err) {
     setChip("error", "Model failed to load");
-    hideProgress();
+    const msg = err instanceof Error ? err.message : String(err);
+    const hint = /webgpu|secure|https/i.test(msg)
+      ? `${msg} — WebGPU needs https:// or localhost.`
+      : msg;
+    showProgress(`Could not start the model: ${hint}`, undefined);
     console.error(err);
     return false;
   }
