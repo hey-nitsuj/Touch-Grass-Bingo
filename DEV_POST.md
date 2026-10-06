@@ -116,4 +116,4 @@ Built with WebLLM + Gemma 3 1B (open weights), Vite, and no backend at all. MIT 
 ---
 
 _Edit before publishing: fill in repo + live demo URLs, and confirm whether to embed the
-DevRelay agent session with `{% agent_session <id> %}`._
+DevRelay agent session with._
