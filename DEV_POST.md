@@ -2,7 +2,7 @@
 
 > **Status**: draft for the Hacktoberfest Open-Source AI Challenge: Week 1 — Touch Grass
 > **Required tag**: `#hf26challenge` · additional tags: `#gemma`, `#webgpu`, `#hacktoberfest`
-> **Repo**: _fill in once pushed to GitHub_ · **Live demo**: _fill in once deployed_
+> **Repo**: https://github.com/hey-nitsuj/Touch-Grass-Bingo · **Live demo**: https://hey-nitsuj.github.io/Touch-Grass-Bingo/
 
 ---
 
@@ -72,24 +72,30 @@ that must always produce exactly 24 squares. Defenses, in order:
 | --- | --- |
 | JSON wrapped in prose or markdown fences | bracket-hunting parser |
 | Model answers with a numbered list instead of JSON | line-based fallback parser |
+| JSON arrays with trailing commas (Gemma's signature) | salvage quoted strings when strict `JSON.parse` fails |
+| Repeated squares across attempts | case-insensitive dedupe |
+| Single-word lazy squares (`dog`, `leaf`, `flash`) | bare-noun gate drops them; card tops up from the pad pool, or regenerates |
+| Recap falls into a repetition loop (`a *another* dog…`) | `repetition_penalty` + degenerate-output detector + colder retry |
 | Fewer than 24 items returned | top-up from a themed pad pool |
-| Genuinely bad response | one retry at lower temperature, then a built-in preset deck |
+| Genuinely bad response | retry with a stricter prompt, then a built-in preset deck |
 | No WebGPU / failed worker | preset decks + an honest status chip, never a dead end |
 
-Every path terminates in a playable card. The parser tests live in `tests/extract.test.ts`.
+Every path terminates in a playable card. The parser and defense tests live in `tests/extract.test.ts`.
 
 **A detail worth stealing:** before picking the model I checked WebLLM's prebuilt config for
 `required_features`. Plenty of popular `q4f16_1` builds declare
 `required_features: ["shader-f16"]` and throw `ShaderF16SupportError` on GPUs without that
 feature. `gemma3-1b-it-q4f16_1-MLC` (711 MB VRAM, `low_resource_required: true`) does not —
-which makes it the right default for a game anyone should be able to open. Feature-detecting
-`navigator.gpu` up front and falling back to preset decks keeps the promise: the app never
-dead-ends.
+which makes it the right default for a game anyone should be able to open. Another landmine:
+Gemma 3's config ships both `context_window_size` and `sliding_window_size` positive, which
+WebLLM refuses (`WindowSizeConfigurationError`) — unless you disable one at load time via
+`chatOpts: { sliding_window_size: -1 }`. Feature-detecting `navigator.gpu` up front and
+falling back to preset decks keeps the promise: the app never dead-ends.
 
 ## Getting it running
 
 ```bash
-git clone <repo>
+git clone https://github.com/hey-nitsuj/Touch-Grass-Bingo
 npm install
 npm run dev        # local dev
 npm run test       # parser tests
@@ -112,8 +118,3 @@ The point of the game is that the screen is the shortest part of the experience.
 card, put the phone in your pocket, walk, and come back for the recap.
 
 Built with WebLLM + Gemma 3 1B (open weights), Vite, and no backend at all. MIT licensed.
-
----
-
-_Edit before publishing: fill in repo + live demo URLs, and confirm whether to embed the
-DevRelay agent session with._

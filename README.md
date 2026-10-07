@@ -87,15 +87,26 @@ WebGPU the app falls back to built-in preset decks so it never dead-ends.
 
 ## How it handles small-model reality
 
-A 1B model is charming but flaky, so the app defends itself:
+A 1B model is charming but flaky, so the app defends itself — and keeps getting *better*
+at defending itself as the flakiness shows up in the field:
 
 | Failure | Defense |
 | --- | --- |
 | JSON wrapped in prose or markdown fences | bracket-hunting parser |
 | Model answers with a numbered list instead of JSON | line-based fallback parser |
+| JSON arrays with trailing commas (Gemma's signature) | salvage quoted strings when strict `JSON.parse` fails |
+| Repeated squares across attempts | case-insensitive dedupe |
+| Single-word lazy squares (`dog`, `leaf`) | bare-noun gate drops them; card tops up from the pad pool, or regenerates |
+| Recap falls into a repetition loop (`a *another* dog…`) | `repetition_penalty` + a degenerate-output detector + colder retry |
 | Fewer than 24 items returned | top-up from a themed pad pool |
-| Genuinely bad response | one retry at lower temperature, then preset deck |
+| Genuinely bad response | retry with a stricter prompt, then preset deck |
 | No WebGPU / crashed worker | preset decks, honest status chip |
+
+Model-load gotchas are handled too: Gemma 3's shipped config sets both
+`context_window_size` and `sliding_window_size` positive, which WebLLM refuses —
+the app loads it with one disabled (`chatOpts: { sliding_window_size: -1 }`). And
+`gemma3-1b-it-q4f16_1-MLC` was chosen partly because it does **not** declare the
+`shader-f16` requirement that trips up many other `q4f16_1` builds on ordinary GPUs.
 
 ## Tech stack
 
