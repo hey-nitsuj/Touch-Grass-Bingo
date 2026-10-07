@@ -213,17 +213,62 @@ export async function generateRecap(opts: {
   bingo: boolean;
 }): Promise<string> {
   if (!engine) throw new Error("Model not loaded.");
-  const prompt = `You are the friendly narrator of "Touch Grass Bingo". Write a warm, slightly wry field recap (2-4 sentences, one paragraph) of someone's ${opts.time} ${opts.habitat} walk.
+  // Cap input so the 1B model isn't handed 24 items to riff on; keep it a
+  // focused highlight reel of the best-spotted things.
+  const found = opts.found.slice(0, 8);
+  const missed = opts.missed.slice(0, 4);
+  const prompt = `You narrate "Touch Grass Bingo". A player finished a ${opts.time} ${opts.habitat} walk and crossed squares off a bingo card.
 
-They spotted: ${opts.found.join("; ")}${opts.bingo ? "\nThey got at least one full line (BINGO)." : ""}
-They missed: ${opts.missed.slice(0, 8).join("; ")}
+Everything they actually saw is in the list below. Retell the walk in 2-3 sentences, one paragraph, using ONLY those items — invent no weather, no new animals, no scenery that isn't listed, and never repeat a phrase.
 
-Rules: mention 2-3 specific things they found, keep it light, no emojis, no preamble, no quotation marks around the whole reply.`;
-  const res = await engine.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.8,
-    max_tokens: 220,
-    stream: false,
-  });
-  return (res.choices[0]?.message?.content ?? "").trim();
+They spotted: ${found.join("; ")}
+${opts.bingo ? "They got BINGO." : `They hoped to see but missed: ${missed.join("; ")}`}
+
+Warm and slightly wry, mention 2-3 of the spotted things by name, no emojis, no preamble, no quotation marks around the whole reply.`;
+  // A 1B model can still stumble into a repetition loop; one cooler retry beats
+  // serving a "a another dog, and a another" wall of text.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await engine.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      temperature: attempt === 0 ? 0.7 : 0.4,
+      // The #1 fix for 1B-model loops ("a *another* dog, *and* a *another*…").
+      repetition_penalty: 1.2,
+      max_tokens: 260,
+      stream: false,
+    });
+    const text = (res.choices[0]?.message?.content ?? "").trim();
+    const clean = text.replace(/^["'“”—-]|["'”…-]$/g, "").trim();
+    if (clean && !looksDegenerate(clean) && clean.split(/\s+/).length <= 70) return clean;
+    if (attempt === 1) {
+      return looksDegenerate(clean) || !clean
+        ? "The walk was exactly as the card suggested — no story needed."
+        : clean;
+    }
+  }
+  return "";
+}
+
+/**
+ * Cheap degenerate-output detector for Gemma 1B's classic repetition loop.
+ * Garbled text replays whole 2- and 3-word phrases and craters its type-token
+ * ratio ("a *another* dog, *and* a *another* dog…"). Measured on known-good
+ * recaps vs. the real broken output: good→0/0/0.8+, broken→17/10/0.51.
+ */
+export function looksDegenerate(text: string): boolean {
+  const words = text.toLowerCase().replace(/[^a-z0-9'\s]/g, " ").split(/\s+/).filter(Boolean);
+  if (words.length < 12) return false;
+
+  function dupNgrams(n: number): number {
+    const seen = new Set<string>();
+    const dup = new Set<string>();
+    for (let i = 0; i + n <= words.length; i++) {
+      const gram = words.slice(i, i + n).join(" ");
+      if (seen.has(gram)) dup.add(gram);
+      seen.add(gram);
+    }
+    return dup.size;
+  }
+
+  const unique = new Set(words).size;
+  return dupNgrams(2) >= 4 || dupNgrams(3) >= 2 || unique / words.length < 0.6;
 }

@@ -1,4 +1,4 @@
-import { extractStringArray } from "../src/engine";
+import { extractStringArray, looksDegenerate } from "../src/engine";
 
 const numbered = Array.from({ length: 24 }, (_, i) => `${i + 1}. thing number ${i + 1}`).join("\n");
 
@@ -37,5 +37,19 @@ for (const [input, shouldFind] of cases) {
     console.log(clean ? "PASS" : "FAIL", "-> items clean (no JSON fragments)");
   }
 }
+console.log(`${pass}/${checks} passed`);
+
+// The recap loop-guard must flag Gemma 1B's garbled repetition output and
+// accept coherent recaps.
+const brokenRecap = `Here's a warm, slightly wry field recap of a Park Walk: The afternoon sun warmed my skin, a gentle breeze rustled through the leaves, and I noticed a peculiar sight – a maple seed helicopter landed softly on the grass. It was a small, unexpected surprise, a maple seed, and then a squirrel scampering into a small, nutty treat. Then, a squirrel with a snack. I spotted a flash of a helicopter, a brief moment of movement. The dog was playfully fetching a ball. I noticed a dog, a little bit of a landing, a shiny, and a dog was playing fetch. The world suddenly became a snapshot of a dog, a moment of a bandana. The dog was swiftly moving, a whole bit of a landing. I saw a playful dog, and then a moment of a landing.`;
+const goodRecaps = [
+  "The crow judging you absolutely charmed, the dog in a bandana delivered, and you turned a shortcut by the playgrounds. BINGO just past the picnic benches.",
+  "Quiet walk: the heron held its pose, a paddleboarder wobbled once, and you found a skip-able stone at your feet. No bingo, but the pier made up for it.",
+  "A maple seed helicopter spun down onto the path minutes into your walk, and the squirrel with a snack you'd guessed wrong about finally showed. One full line — BINGO by the fountain.",
+];
+checks += 2 + goodRecaps.length;
+const degenOk = looksDegenerate(brokenRecap) === true && goodRecaps.every((r) => looksDegenerate(r) === false);
+pass += degenOk ? 2 + goodRecaps.length : 0;
+console.log(degenOk ? "PASS" : "FAIL", "-> recap loop-guard flags broken text, accepts clean recaps");
 console.log(`${pass}/${checks} passed`);
 if (pass !== checks) process.exit(1);
