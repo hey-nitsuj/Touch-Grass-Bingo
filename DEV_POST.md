@@ -117,4 +117,7 @@ WebGPU needs a secure context — `https://` or `localhost`, nowhere else.
 The point of the game is that the screen is the shortest part of the experience. Generate a
 card, put the phone in your pocket, walk, and come back for the recap.
 
+**Play it live: <https://hey-nitsuj.github.io/Touch-Grass-Bingo/>** — or read the source at
+[github.com/hey-nitsuj/Touch-Grass-Bingo](https://github.com/hey-nitsuj/Touch-Grass-Bingo).
+
 Built with WebLLM + Gemma 3 1B (open weights), Vite, and no backend at all. MIT licensed.
