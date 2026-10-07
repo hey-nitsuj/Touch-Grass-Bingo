@@ -1,6 +1,7 @@
 import {
   CreateWebWorkerMLCEngine,
   hasModelInCache,
+  type ChatOptions,
   type MLCEngineConfig,
   type WebWorkerMLCEngine,
 } from "@mlc-ai/web-llm";
@@ -37,8 +38,14 @@ export function loadModel(onProgress: ProgressListener): Promise<WebWorkerMLCEng
   const config: MLCEngineConfig = {
     initProgressCallback: (r) => onProgress({ progress: r.progress, text: r.text }),
   };
+  // Gemma 3 ships with BOTH context_window_size (8192) and sliding_window_size
+  // (512) positive in its mlc-chat-config.json; WebLLM refuses that combination
+  // (WindowSizeConfigurationError) unless one is -1. The prebuilt override already
+  // clamps context to 4096, so we disable the sliding window here — full attention
+  // is fine for short card/recap generations.
+  const chatOpts: ChatOptions = { sliding_window_size: -1 };
   const worker = new Worker(new URL("./mlc.worker.ts", import.meta.url), { type: "module" });
-  loading = CreateWebWorkerMLCEngine(worker, MODEL_ID, config)
+  loading = CreateWebWorkerMLCEngine(worker, MODEL_ID, config, chatOpts)
     .then((e) => {
       engine = e;
       return e;
