@@ -63,32 +63,75 @@ export function engineReady(): boolean {
 }
 
 /**
+ * Normalize one item: trim, drop stray quotes/commas/periods, lowercase the
+ * first letter (the prompt demands lowercase items).
+ */
+function normalizeItem(raw: string, stripMarkers = false): string {
+  let s = raw.trim();
+  if (stripMarkers) s = s.replace(/^[-*•\d]+[.)]\s*/, "");
+  s = s.replace(/^["'`]+/, "").replace(/["'`,\s]+$/, "").replace(/[.]+$/, "").trim();
+  return s.length > 0 ? s.replace(/^[A-Z]/, (c) => c.toLowerCase()) : s;
+}
+
+/** Drop duplicates while preserving order (small models repeat themselves). */
+function dedupe(items: string[]): string[] {
+  const seen = new Set<string>();
+  return items.filter((s) => {
+    const key = s.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
  * Extract the first JSON array of strings from a model response.
- * Small models love wrapping JSON in prose or fences, so we hunt for it.
+ * Small models love wrapping JSON in prose or fences AND leaving trailing
+ * commas, so we (1) strip fences, (2) try strict JSON.parse, and (3) if that
+ * fails, salvage every quoted string inside the bracket slice. Only then do we
+ * fall back to plain numbered-list parsing, which now rejects anything that
+ * still looks like a JSON fragment (`["smooth",` / `umbrella",`).
  */
 export function extractStringArray(text: string): string[] | null {
   const cleaned = text.replace(/```(?:json)?/g, "");
   const start = cleaned.indexOf("[");
   const end = cleaned.lastIndexOf("]");
+
   if (start !== -1 && end > start) {
+    const slice = cleaned.slice(start, end + 1);
+    let raw: unknown = [];
     try {
-      const parsed = JSON.parse(cleaned.slice(start, end + 1));
-      if (Array.isArray(parsed)) {
-        const items = parsed
-          .filter((x): x is string => typeof x === "string")
-          .map((s) => s.trim().replace(/^["'\d]+[.)]\s*/, "").replace(/[.]+$/, ""))
-          .filter((s) => s.length > 0 && s.length <= 60);
-        if (items.length > 0) return items;
-      }
+      raw = JSON.parse(slice);
     } catch {
-      /* fall through to line parsing */
+      // Trailing commas / truncated array: grab every quoted string instead.
+      raw = [...slice.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+    }
+    if (Array.isArray(raw)) {
+      const items = dedupe(
+        raw
+          .filter((x): x is string => typeof x === "string")
+          .map((s) => normalizeItem(s))
+          .filter((s) => s.length >= 2 && s.length <= 60),
+      );
+      if (items.length > 0) return items;
     }
   }
+
   // Fallback: the model answered as a plain list ("1. dog on a leash").
-  const lines = cleaned
-    .split("\n")
-    .map((l) => l.trim().replace(/^[-*•\d]+[.)]\s*/, "").replace(/^["']|["']$/g, "").replace(/[.]+$/, ""))
-    .filter((l) => l.length >= 3 && l.length <= 60 && !/^(here|sure|json|output|card|bingo)/i.test(l));
+  // Reject lines that still contain JSON punctuation — those are fragments of
+  // a broken array, not bingo squares.
+  const lines = dedupe(
+    cleaned
+      .split("\n")
+      .map((l) => normalizeItem(l, true))
+      .filter(
+        (l) =>
+          l.length >= 3 &&
+          l.length <= 60 &&
+          !/[\[\]"{}]/.test(l) &&
+          !/^(here|sure|json|output|card|bingo|only)/i.test(l),
+      ),
+  );
   return lines.length >= 20 ? lines.slice(0, 24) : null;
 }
 
@@ -112,8 +155,16 @@ const BASE_PROMPT = `You write bingo cards for a game called "Touch Grass Bingo"
 Rules for every item:
 - 2 to 5 words, lowercase, no ending period
 - something observable in the next 15 minutes on foot, never abstract
-- specific and vivid over generic ("crow judging you", not "bird")
-- suit the season and time of day given below`;
+- specific and vivid over generic: a tiny scene or a small story, not a bare noun
+- suit the season and time of day given below
+
+The level of specificity to match (small scenes, not plain labels):
+- "crow judging you"
+- "dog in a bandana"
+- "maple seed helicopter"
+- "jogger with a hydration vest"
+- "someone skipping stones better than you"
+- "parked food truck"`;
 
 /** Ask the local model for 24 bingo squares; retries once with a stricter prompt. */
 export async function generateItems(opts: {
