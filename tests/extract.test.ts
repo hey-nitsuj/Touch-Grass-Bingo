@@ -19,6 +19,13 @@ const cases: [string, boolean][] = [
   [`[\n${trailingComma}\n]`, true], // trailing commas must be salvaged, not leaked
   // Duplicates (small models repeat) must collapse, not fill the card twice.
   ['["repeat","Repeat","repeat","other",\n]', true],
+  // Lazy nouns mixed into an otherwise good card must be dropped, not shown.
+  [
+    "[" +
+      Array.from({ length: 20 }, (_, i) => `"scene with item ${i + 1}"`).join(",") +
+      ',"dog","leaf","flash","swing"]',
+    true,
+  ],
 ];
 
 let pass = 0;
@@ -35,6 +42,14 @@ for (const [input, shouldFind] of cases) {
     const clean = got.every((s) => /^[a-z][a-z0-9 .'&–—-]*$/.test(s));
     pass += clean ? 1 : 0;
     console.log(clean ? "PASS" : "FAIL", "-> items clean (no JSON fragments)");
+    // Lazy one-word nouns must not survive on a full card (partial inputs are
+    // only dedupe tests and pass through untouched).
+    if (got.length >= 20) {
+      checks += 1;
+      const noLazyNouns = got.every((s) => s.trim().split(/\s+/).length >= 2);
+      pass += noLazyNouns ? 1 : 0;
+      console.log(noLazyNouns ? "PASS" : "FAIL", "-> no bare single-word nouns on full card");
+    }
   }
 }
 console.log(`${pass}/${checks} passed`);

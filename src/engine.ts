@@ -85,6 +85,18 @@ function dedupe(items: string[]): string[] {
 }
 
 /**
+ * Bare-noun guard. Small models fall back to lazy one-word squares ("dog",
+ * "leaf") — usually a few in an otherwise good card. When we have a full card
+ * to work with, drop every single-word item; partial/toy inputs (tests) pass
+ * through untouched. Callers then top up to 24 from the hand-written pool.
+ */
+function preferMultiWord(items: string[]): string[] {
+  if (items.length < 20) return items;
+  const multi = items.filter((s) => s.trim().split(/\s+/).length >= 2);
+  return multi.length === items.length ? items : multi;
+}
+
+/**
  * Extract the first JSON array of strings from a model response.
  * Small models love wrapping JSON in prose or fences AND leaving trailing
  * commas, so we (1) strip fences, (2) try strict JSON.parse, and (3) if that
@@ -113,7 +125,7 @@ export function extractStringArray(text: string): string[] | null {
           .map((s) => normalizeItem(s))
           .filter((s) => s.length >= 2 && s.length <= 60),
       );
-      if (items.length > 0) return items;
+      if (items.length > 0) return preferMultiWord(items);
     }
   }
 
@@ -132,7 +144,8 @@ export function extractStringArray(text: string): string[] | null {
           !/^(here|sure|json|output|card|bingo|only)/i.test(l),
       ),
   );
-  return lines.length >= 20 ? lines.slice(0, 24) : null;
+  const preferred = preferMultiWord(lines);
+  return preferred.length >= 20 ? preferred.slice(0, 24) : null;
 }
 
 function seasonNow(): string {
@@ -153,7 +166,7 @@ const HABITAT_BRIEF: Record<string, string> = {
 const BASE_PROMPT = `You write bingo cards for a game called "Touch Grass Bingo". Each card is a 5x5 grid of things a person can actually spot while walking outside. The center square is always a free space, so you provide exactly 24 items.
 
 Rules for every item:
-- 2 to 5 words, lowercase, no ending period
+- 2 to 5 words, lowercase, no ending period; NEVER a single word like "dog" or "leaf"
 - something observable in the next 15 minutes on foot, never abstract
 - specific and vivid over generic: a tiny scene or a small story, not a bare noun
 - suit the season and time of day given below
@@ -191,9 +204,14 @@ ${focusLine}${avoidLine}
 Reply with ONLY a JSON array of exactly 24 strings. No markdown, no explanation.`;
 
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Second attempt gets a stricter nudge — the first draw may have been lazy.
+    const strict = attempt === 1
+      ? "\nIMPORTANT: My last card failed. EVERY item must be a 2-to-5-word scene. Absolutely no one-word items like 'dog', 'tree', or 'leaf'."
+      : "";
     const res = await engine.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt + strict }],
       temperature: attempt === 0 ? 0.9 : 0.4,
+      repetition_penalty: 1.05,
       max_tokens: 600,
       stream: false,
     });
